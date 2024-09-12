@@ -1,5 +1,5 @@
-﻿using Npgsql;
-using NpgsqlTypes;
+﻿using System.Data;
+using System.Data.SqlClient;
 using TestXML.Models;
 
 namespace TestXML.Services
@@ -10,7 +10,7 @@ namespace TestXML.Services
 
         public static void SaveDataToDatabase(List<Order> orders)
         {
-            using (var connection = new NpgsqlConnection(connectionString))
+            using (var connection = new SqlConnection(connectionString))
             {
                 connection.Open();
 
@@ -38,29 +38,29 @@ namespace TestXML.Services
             }
         }
 
-        private static void InsertUsers(Order order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+        private static void InsertUsers(Order order, SqlConnection connection, SqlTransaction transaction)
         {
             if (!IsUserExists(connection, order.User.Email))
             {
-                using (var command = new NpgsqlCommand("INSERT INTO users (Fio, Email) VALUES (@Fio, @Email)", connection))
+                using (var command = new SqlCommand("INSERT INTO users (Fio, Email) VALUES (@Fio, @Email)", connection))
                 {
-                    command.Parameters.Add("@Fio", NpgsqlDbType.Text).Value = order.User.Fio;
-                    command.Parameters.Add("@Email", NpgsqlDbType.Text).Value = order.User.Email;
+                    command.Parameters.Add("@Fio", SqlDbType.Text).Value = order.User.Fio;
+                    command.Parameters.Add("@Email", SqlDbType.Text).Value = order.User.Email;
                     command.ExecuteNonQuery();
                 }
             }
         }
 
-        private static void InsertProducts(Order order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+        private static void InsertProducts(Order order, SqlConnection connection, SqlTransaction transaction)
         {
             foreach (var product in order.Products)
             {
                 if (!IsProductExists(connection, product.Name))
                 {
-                    using (var command = new NpgsqlCommand("INSERT INTO products (Name, Price) VALUES (@Name, @Price)", connection))
+                    using (var command = new SqlCommand("INSERT INTO products (Name, Price) VALUES (@Name, @Price)", connection))
                     {
-                        command.Parameters.Add("@Name", NpgsqlDbType.Text).Value = product.Name;
-                        command.Parameters.Add("@Price", NpgsqlDbType.Numeric).Value = product.Price;
+                        command.Parameters.Add("@Name", SqlDbType.Text).Value = product.Name;
+                        command.Parameters.Add("@Price", SqlDbType.Decimal).Value = product.Price;
                         command.ExecuteNonQuery();
                     }
                 }
@@ -68,64 +68,64 @@ namespace TestXML.Services
         }
 
 
-        private static void InsertOrder(Order order, NpgsqlConnection connection, NpgsqlTransaction transaction)
+        private static void InsertOrder(Order order, SqlConnection connection, SqlTransaction transaction)
         {
-            using (var command = new NpgsqlCommand("INSERT INTO orders (No, Reg_Date, User_Id, Sum) VALUES (@No, @Reg_Date,@User_Id, @Sum)", connection))
+            using (var command = new SqlCommand("INSERT INTO orders (No, Reg_Date, User_Id, Sum) VALUES (@No, @Reg_Date,@User_Id, @Sum)", connection))
             {
-                command.Parameters.Add("@No", NpgsqlDbType.Integer).Value = order.No;
+                command.Parameters.Add("@No", SqlDbType.Int).Value = order.No;
 
                 string dateString = order.Reg_Date;
                 DateTime dateTime = new DateTime(int.Parse(dateString.Split('.')[0]), int.Parse(dateString.Split('.')[1]), int.Parse(dateString.Split('.')[2]));
 
-                command.Parameters.Add("@Reg_Date", NpgsqlDbType.Date).Value = dateTime;
+                command.Parameters.Add("@Reg_Date", SqlDbType.Date).Value = dateTime;
                 var id = GetUserIdByEmail(connection, order.User.Email);
-                command.Parameters.Add("@User_Id", NpgsqlDbType.Integer).Value = id;
-                command.Parameters.Add("@Sum", NpgsqlDbType.Numeric).Value = order.Sum;
+                command.Parameters.Add("@User_Id", SqlDbType.Int).Value = id;
+                command.Parameters.Add("@Sum", SqlDbType.Decimal).Value = order.Sum;
                 command.ExecuteNonQuery();
             }
 
             foreach (var product in order.Products)
             {
-                using (var command = new NpgsqlCommand("INSERT INTO order_products (Order_Id, Product_Id, Quantity) VALUES (@OrderId, @ProductId, @Quantity)", connection))
+                using (var command = new SqlCommand("INSERT INTO order_products (Order_Id, Product_Id, Quantity) VALUES (@OrderId, @ProductId, @Quantity)", connection))
                 {
-                    command.Parameters.Add("@OrderId", NpgsqlDbType.Integer).Value = order.No;
-                    command.Parameters.Add("@ProductId", NpgsqlDbType.Integer).Value = GetProductIdByName(connection, product.Name);
-                    command.Parameters.Add("@Quantity", NpgsqlDbType.Integer).Value = product.Quantity;
+                    command.Parameters.Add("@OrderId", SqlDbType.Int).Value = order.No;
+                    command.Parameters.Add("@ProductId", SqlDbType.Int).Value = GetProductIdByName(connection, product.Name);
+                    command.Parameters.Add("@Quantity", SqlDbType.Int).Value = product.Quantity;
                     command.ExecuteNonQuery();
                 }
             }
         }
 
-        private static bool IsProductExists(NpgsqlConnection connection, string productName)
+        private static bool IsProductExists(SqlConnection connection, string productName)
         {
-            using (var command = new NpgsqlCommand($"SELECT EXISTS (SELECT 1 FROM products WHERE Name = @ProductName)", connection))
+            using (var command = new SqlCommand($"SELECT EXISTS (SELECT 1 FROM products WHERE Name = @ProductName)", connection))
             {
-                command.Parameters.Add("@ProductName", NpgsqlDbType.Text).Value = productName;
+                command.Parameters.Add("@ProductName", SqlDbType.Text).Value = productName;
                 return Convert.ToBoolean(command.ExecuteScalar());
             }
         }
 
-        private static bool IsUserExists(NpgsqlConnection connection, string email)
+        private static bool IsUserExists(SqlConnection connection, string email)
         {
-            using (var command = new NpgsqlCommand($"SELECT EXISTS (SELECT 1 FROM users WHERE email = @UserEmail)", connection))
+            using (var command = new SqlCommand($"SELECT EXISTS (SELECT 1 FROM users WHERE email = @UserEmail)", connection))
             {
-                command.Parameters.Add("@UserEmail", NpgsqlDbType.Text).Value = email;
+                command.Parameters.Add("@UserEmail", SqlDbType.Text).Value = email;
                 return Convert.ToBoolean (command.ExecuteScalar());
             }
         }
 
-        private static int GetProductIdByName(NpgsqlConnection connection, string productName)
+        private static int GetProductIdByName(SqlConnection connection, string productName)
         {
-            using (var command = new NpgsqlCommand($"SELECT Id FROM products WHERE Name = '{productName}'", connection))
+            using (var command = new SqlCommand($"SELECT Id FROM products WHERE Name = '{productName}'", connection))
             {
                 object result = command.ExecuteScalar();
                 return Convert.ToInt32(result);
             }
         }
 
-        private static int GetUserIdByEmail(NpgsqlConnection connection, string userEmail)
+        private static int GetUserIdByEmail(SqlConnection connection, string userEmail)
         {
-            using (var command = new NpgsqlCommand($"SELECT Id FROM users WHERE email = '{userEmail}'", connection))
+            using (var command = new SqlCommand($"SELECT Id FROM users WHERE email = '{userEmail}'", connection))
             {
                 object result = command.ExecuteScalar();
                 return Convert.ToInt32(result);
