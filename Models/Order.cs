@@ -1,27 +1,18 @@
-﻿using System.Xml.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TestXML.Models
 {
-    [XmlRoot("orders")]
-    public class RootOrders
-    {
-        [XmlElement("order")]
-        public List<Order> OrdersList { get; set; }
-    }
-
-    [XmlRoot("order")]
     public class Order
     {
-        [XmlElement("no")]
+        [Key]
+        public int Id { get; set; }
         public int No { get; set; }
-        [XmlElement("reg_date")]
         public string Reg_Date { get; set; }
-        [XmlElement("sum")]
         public decimal Sum { get; set; }
-        [XmlElement("product")]
-        public List<Product> Products { get; set; } = new List<Product>();
-
-        [XmlElement("user")]
-        public User User { get; set; } = new User();
+        public List<Product>? Products { get; set; }
+        [ForeignKey("Users")]
+        public int UserId { get; set; }
+        public virtual User? User { get; set; }
     }
 }

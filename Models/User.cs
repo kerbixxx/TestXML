@@ -1,13 +1,13 @@
-﻿using System.Xml.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Xml.Serialization;
 
 namespace TestXML.Models
 {
-    [XmlRoot("user")]
     public class User
     {
-        [XmlElement("fio")]
+        [Key]
+        public int Id { get; set; }
         public string Fio { get; set; }
-        [XmlElement("email")]
         public string Email { get; set; }
     }
 }
