@@ -6,7 +6,7 @@ namespace TestXML.Services
 {
     public static class DatabaseService
     {
-        private const string connectionString = "Host=localhost;Port=5432;Username=postgres;Password=5051;Database=Market";
+        private const string connectionString = "Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;";
 
         public static void SaveDataToDatabase(List<Order> orders)
         {
