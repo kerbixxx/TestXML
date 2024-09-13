@@ -10,7 +10,7 @@ namespace TestXML.Models
         public int No { get; set; }
         public string Reg_Date { get; set; }
         public decimal Sum { get; set; }
-        public List<Product>? Products { get; set; }
+        //public List<Product>? Products { get; set; }
         [ForeignKey("Users")]
         public int UserId { get; set; }
         public virtual User? User { get; set; }

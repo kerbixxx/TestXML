@@ -51,7 +51,6 @@ public class Program
             foreach (var orderXml in orders)
             {
                 var order = new Order();
-                order.Products = new List<Product>();
 
                 var user = userRepository.FindByEmail(orderXml.User.Email);
 
@@ -73,10 +72,10 @@ public class Program
                 {
                     var product = productRepository.FindByName(productXml.Name);
 
-                    if (product == null && !order.Products.Any(p => p.Name == productXml.Name))
+                    if (product == null)
                     {
                         product = new Product { Name = productXml.Name, Price = productXml.Price };
-                        order.Products.Add(product);
+                        productRepository.Add(product);
                     }
 
                     var productOrder = new ProductOrder()

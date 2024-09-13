@@ -18,9 +18,6 @@ namespace TestXML.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Order>()
-                .HasMany(o => o.Products);
-
-            modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)
                 .WithMany()
                 .HasForeignKey(o => o.UserId);
