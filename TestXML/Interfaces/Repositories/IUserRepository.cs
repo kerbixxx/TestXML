@@ -2,7 +2,7 @@
 
 namespace TestXML.Interfaces.Repositories
 {
-    interface IUserRepository : IRepository<User>
+    public interface IUserRepository : IRepository<User>
     {
         User FindByEmail(string email);
     }

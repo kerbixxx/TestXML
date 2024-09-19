@@ -7,7 +7,7 @@ using TestXML.Models.Dto;
 
 namespace TestXML.Interfaces.Services
 {
-    interface IOrderProcessor
+    public interface IOrderProcessor
     {
         List<OrderXml> ReadOrdersFromXml(string filePath);
         void ProcessOrders(List<OrderXml> orders);

@@ -25,6 +25,11 @@ namespace TestXML.Implementation.Repositories
             return _dbSet.Find(id);
         }
 
+        public IEnumerable<T> GetAll()
+        {
+            return _dbSet;
+        }
+
         public void Save()
         {
             _marketDbContext.SaveChanges();

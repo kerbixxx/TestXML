@@ -9,7 +9,7 @@ using TestXML.Models;
 
 namespace TestXML.Implementation.Repositories
 {
-    public class UserRepository : Repository<User>,IUserRepository
+    public class UserRepository : Repository<User>, IUserRepository
     {
         private readonly MarketDbContext _marketDbContext;
 

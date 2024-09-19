@@ -2,8 +2,10 @@
 
 namespace TestXML.Interfaces.Repositories
 {
-    interface IProductOrderRepository : IRepository<ProductOrder>
+    public interface IProductOrderRepository : IRepository<ProductOrder>
     {
-        ProductOrder FindByProductIdAndOrderId(int orderId, int productId);
+        ProductOrder FindByProductIdAndOrderId(int orderNo, int productId);
+        void RemoveRange(int orderId);
+        IEnumerable<ProductOrder> GetAllByOrderId(int orderId);
     }
 }

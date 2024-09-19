@@ -10,10 +10,7 @@ namespace TestXML.Context
         public DbSet<User> Users { get; set; }
         public DbSet<ProductOrder> ProductOrders { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer(@"Server=.\SQLEXPRESS;Database=testXml;Trusted_Connection=True;Integrated Security=True;TrustServerCertificate=true;");
-        }
+        public MarketDbContext(DbContextOptions options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

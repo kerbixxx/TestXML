@@ -1,6 +1,7 @@
 ﻿using System.Xml.Serialization;
 using TestXML.Context;
 using TestXML.Implementation.Repositories;
+using TestXML.Interfaces.Repositories;
 using TestXML.Interfaces.Services;
 using TestXML.Models;
 using TestXML.Models.Dto;
@@ -9,20 +10,23 @@ namespace TestXML.Implementation.Services
 {
     public class OrderProcessor : IOrderProcessor
     {
-        private readonly OrderRepository _orderRepo;
-        private readonly ProductOrderRepository _productOrderRepo;
-        private readonly ProductRepository _productRepo;
-        private readonly UserRepository _userRepo;
+        private readonly IOrderRepository _orderRepo;
+        private readonly IProductOrderRepository _productOrderRepo;
+        private readonly IProductRepository _productRepo;
+        private readonly IUserRepository _userRepo;
+        private readonly ITransactionManager _transactionManager;
 
-        public OrderProcessor(OrderRepository orderRepository,
-                               ProductOrderRepository productOrderRepository,
-                               ProductRepository productRepository,
-                               UserRepository userRepository)
+        public OrderProcessor(IOrderRepository orderRepository,
+                               IProductOrderRepository productOrderRepository,
+                               IProductRepository productRepository,
+                               IUserRepository userRepository,
+                               ITransactionManager transactionManager)
         {
             _orderRepo = orderRepository;
             _productRepo = productRepository;
             _userRepo = userRepository;
             _productOrderRepo = productOrderRepository;
+            _transactionManager = transactionManager;
         }
 
         public List<OrderXml> ReadOrdersFromXml(string filePath)
@@ -37,34 +41,25 @@ namespace TestXML.Implementation.Services
 
         public void ProcessOrders(List<OrderXml> orders)
         {
-            var dbContext = new MarketDbContext();
-
-            dbContext.Database.EnsureCreated();
-
-            var orderRepository = new OrderRepository(dbContext);
-            var userRepository = new UserRepository(dbContext);
-            var productRepository = new ProductRepository(dbContext);
-            var productOrderRepository = new ProductOrderRepository(dbContext);
-
             try
             {
-                dbContext.Database.BeginTransaction();
+                _transactionManager.BeginTransaction();
 
                 foreach (var orderXml in orders)
                 {
                     ProcessOrder(orderXml);
                 }
 
-                dbContext.Database.CommitTransaction();
+                _transactionManager.CommitTransaction();
             }
             catch (Exception ex)
             {
-                dbContext.Database.RollbackTransaction();
+                _transactionManager.RollbackTransaction();
                 throw ex;
             }
             finally
             {
-                dbContext.Dispose();
+                _transactionManager.Dispose();
             }
         }
 
@@ -126,33 +121,52 @@ namespace TestXML.Implementation.Services
 
         private void UpdateExistingOrder(Order existingOrder, OrderXml orderXml)
         {
+            // Обновляем общую информацию о заказе
             existingOrder.User = _userRepo.FindByEmail(orderXml.User.Email);
             existingOrder.No = orderXml.No;
             existingOrder.Reg_Date = orderXml.Reg_Date;
             existingOrder.Sum = orderXml.Sum;
 
+            _productOrderRepo.RemoveRange(existingOrder.Id);
+
             foreach (var productXml in orderXml.Products)
             {
-                var productId = _productRepo.FindByName(productXml.Name).Id;
-                var existingProductOrder = _productOrderRepo.FindByProductIdAndOrderId(existingOrder.Id, productId);
-
-                if (existingProductOrder == null)
+                var product = _productRepo.FindByName(productXml.Name);
+                if (product == null)
                 {
-                    var product = _productRepo.FindByName(productXml.Name);
-                    if (product == null)
-                    {
-                        product = new Product { Name = productXml.Name, Price = productXml.Price };
-                        _productRepo.Add(product);
-                    }
+                    product = new Product { Name = productXml.Name, Price = productXml.Price };
+                    _productRepo.Add(product);
+                }
 
-                    existingProductOrder = new ProductOrder { Product = product, Order = existingOrder, Quantity = productXml.Quantity };
-                    _productOrderRepo.Add(existingProductOrder);
+                var quantity = productXml.Quantity;
+                var existingProductOrder = _productOrderRepo.FindByProductIdAndOrderId(existingOrder.Id, product.Id);
+
+                if (existingProductOrder != null)
+                {
+                    existingProductOrder.Quantity = quantity;
                 }
                 else
+                {
+                    existingProductOrder = new ProductOrder
+                    {
+                        Product = product,
+                        Order = existingOrder,
+                        Quantity = quantity
+                    };
+                    _productOrderRepo.Add(existingProductOrder);
+                }
+            }
+
+            foreach (var existingProductOrder in _productOrderRepo.GetAllByOrderId(existingOrder.Id))
+            {
+                var productXml = orderXml.Products.FirstOrDefault(p => p.Name == existingProductOrder.Product.Name);
+                if (productXml != null)
                 {
                     existingProductOrder.Quantity = productXml.Quantity;
                 }
             }
+
+            _orderRepo.Update(existingOrder);
         }
     }
 }
