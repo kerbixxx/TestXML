@@ -6,6 +6,7 @@ using TestXML.Interfaces.Repositories;
 using TestXML.Models.Dto;
 using TestXML.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
+using TestXML.Exceptions;
 
 namespace TestXML.Tests
 {
@@ -142,8 +143,161 @@ namespace TestXML.Tests
                 }
             };
 
-            Assert.Throws<NullReferenceException>(() => _processor.ProcessOrders(new List<OrderXml> { orderXml }));
+            Assert.Throws<UserNotFoundException>(() => _processor.ProcessOrders(new List<OrderXml> { orderXml }));
         }
+
+        //Изменение заказа на тот же.
+        [Fact]
+        public void ProcessOrders_ShouldNotChangeOrderWhenProductsUnchanged()
+        {
+            ClearDatabase(GenerateUniqueDatabaseName());
+
+            var initialOrderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 20500,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product1", Price = 10000, Quantity = 2 },
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { initialOrderXml });
+
+            var initialOrder = _orderRepo.FindByNo(123);
+            Assert.Equal(20500, initialOrder.Sum);
+            Assert.Equal(2, _productOrderRepo.GetAll().Count());
+
+
+            var orderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 20500,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product1", Price = 10000, Quantity = 2 },
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { orderXml });
+
+            var updatedOrder = _orderRepo.FindByNo(123);
+            Assert.Equal(20500, updatedOrder.Sum);
+            Assert.Equal(2, _productOrderRepo.GetAll().Count());
+        }
+
+        //Добавление нового продукта к существующему заказу.
+        [Fact]
+        public void ProcessOrders_ShouldAddNewProductToExistingOrder()
+        {
+            ClearDatabase(GenerateUniqueDatabaseName());
+
+            var initialOrderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 2000,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product1", Price = 1000, Quantity = 1 },
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { initialOrderXml });
+
+            var orderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 3000,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product1", Price = 1000, Quantity = 2 },
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 },
+                    new ProductXml { Name = "Product3", Price = 1500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { orderXml });
+
+            var updatedOrder = _orderRepo.FindByNo(123);
+            Assert.Equal(3000, updatedOrder.Sum);
+
+            var productOrders = _productOrderRepo.GetAll().ToList();
+            Assert.Contains("Product1", productOrders.Select(po => po.Product.Name));
+            Assert.Contains("Product2", productOrders.Select(po => po.Product.Name));
+            Assert.Contains("Product3", productOrders.Select(po => po.Product.Name));
+        }
+
+        //Удаление продукта из существующего заказа.
+        [Fact]
+        public void ProcessOrders_ShouldRemoveProductFromExistingOrder()
+        {
+            ClearDatabase(GenerateUniqueDatabaseName());
+
+            var initialOrderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 2000,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product1", Price = 1000, Quantity = 1 },
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { initialOrderXml });
+
+            var orderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 1000,
+                Products = new List<ProductXml>
+                {
+                    new ProductXml { Name = "Product2", Price = 500, Quantity = 1 }
+                },
+                User = new UserXml { Email = "test@example.com", Fio = "Updated Test" }
+            };
+
+            _processor.ProcessOrders(new List<OrderXml> { orderXml });
+
+            var updatedOrder = _orderRepo.FindByNo(123);
+            Assert.Equal(1000, updatedOrder.Sum);
+
+            var productOrders = _productOrderRepo.GetAll();
+            Assert.Single(productOrders);
+            Assert.Equal("Product2", productOrders.First().Product.Name);
+        }
+
+        //Создание заказа без продуктов.
+        [Fact]
+        public void ProcessOrders_ShouldThrowException_WhenProductNotFoundAndCannotCreate()
+        {
+            ClearDatabase(GenerateUniqueDatabaseName());
+
+            var orderXml = new OrderXml
+            {
+                No = 123,
+                Reg_Date = DateTime.Now.ToShortDateString(),
+                Sum = 20500,
+                User = new UserXml { Email = "test@example.com", Fio = "Test Test" }
+            };
+
+            Assert.Throws<OrderProcessingException>(() => _processor.ProcessOrders(new List<OrderXml> { orderXml }));
+        }
+
 
         private string GenerateUniqueDatabaseName()
         {

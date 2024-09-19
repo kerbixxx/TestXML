@@ -1,5 +1,6 @@
 ﻿using System.Xml.Serialization;
 using TestXML.Context;
+using TestXML.Exceptions;
 using TestXML.Implementation.Repositories;
 using TestXML.Interfaces.Repositories;
 using TestXML.Interfaces.Services;
@@ -45,6 +46,11 @@ namespace TestXML.Implementation.Services
             {
                 _transactionManager.BeginTransaction();
 
+                if (orders.Count == 0)
+                {
+                    throw new NullReferenceException();
+                }
+
                 foreach (var orderXml in orders)
                 {
                     ProcessOrder(orderXml);
@@ -83,6 +89,11 @@ namespace TestXML.Implementation.Services
 
         private Order CreateOrder(OrderXml orderXml)
         {
+            if (orderXml.User == null)
+            {
+                throw new UserNotFoundException();
+            }
+
             var user = _userRepo.FindByEmail(orderXml.User.Email);
             if (user == null)
             {
@@ -105,6 +116,11 @@ namespace TestXML.Implementation.Services
 
         private void AddProductsToOrder(Order order, List<ProductXml> products)
         {
+            if(products.Count == 0)
+            {
+                throw new OrderProcessingException();
+            }
+
             foreach (var productXml in products)
             {
                 var product = _productRepo.FindByName(productXml.Name);
