@@ -4,27 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TestXML.Context;
+using TestXML.Interfaces.Repositories;
 using TestXML.Models;
 
-namespace TestXML.Repositories
+namespace TestXML.Implementation.Repositories
 {
-    public class UserRepository : IRepository<User>
+    public class UserRepository : Repository<User>,IUserRepository
     {
         private readonly MarketDbContext _marketDbContext;
 
-        public UserRepository(MarketDbContext marketDbContext)
+        public UserRepository(MarketDbContext marketDbContext) : base(marketDbContext)
         {
             _marketDbContext = marketDbContext;
-        }
-
-        public void Add(User entity)
-        {
-            _marketDbContext.Users.Add(entity);
-        }
-
-        public User FindById(int id)
-        {
-            return _marketDbContext.Users.FirstOrDefault(u => u.Id == id);
         }
 
         public User FindByEmail(string email)
